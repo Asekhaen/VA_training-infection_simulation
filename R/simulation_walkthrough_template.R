@@ -11,3 +11,13 @@
 #       b) Infection prevalence surveys on some days (infection prevalence timeseries)
 
 #Minimum resolution is daily
+
+# libraries ----
+library(tidyverse)
+
+# set up population and time-scale parameters
+pop <- 10000
+n_days <- 365
+days <- seq_len(n_days)
+
+# set up our disease paraemeters

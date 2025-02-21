@@ -31,7 +31,8 @@ prev_days <- head(prev_days, -1)
 # alternative option is prev_days[1:(length(prev_days)-1)]
 prev_days <- tail(prev_days, -1)
 #alternative option is prev_days[2:(length(prev_days)-1)]
-test_positive_duration <- 14 #length of time after infection you will test positive on a prevalence survey
+#length of time after infection you will test positive on a prevalence survey
+test_positive_duration <- 14 
 
 #Disease parameters
 prob_ever_symptomatic <- 0.7
@@ -39,19 +40,36 @@ min_symptom_delay <- 3
 max_symptom_delay <- 10
 
 #Define true infection incidence as an increasing epidemic curve
-true_inf_inc <- seq(0.005,0.02, length.out = n_days)
+# that is, the number of new infections per day, per person
+true_inf_inc <- seq(from = 0.0005, to = 0.002, length.out = n_days)
 # Define the expected number of new infections per day
 expected_inf_daily <- true_inf_inc * pop
-plot(expected_inf_daily~days) #plot to visualise
+#plot to visualise
+plot(expected_inf_daily~days) 
 
+## TODO: Discuss "vector recycling"
 
 #### Set up structure for data simulations ####
 # Simulate number of new infections per day 
 #(across the population, therefore new infection = new infected agent)
-inf_daily <- rnbinom(n_days, mu = expected_inf_daily, size = 100)
+inf_daily <- rnbinom(n = n_days, mu = expected_inf_daily, size = 100)
 
-plot(inf_daily ~ days, type = "l", lty = "dotted") #plot to visualise
-abline(v = prev_days, #add infection prevalence surveys to the plot
+# Demonstrating that mu can be a vector - many numbers
+rnbinom(n = 1, mu = expected_inf_daily[1], size = 100)
+rnbinom(n = 1, mu = expected_inf_daily[2], size = 100)
+rnbinom(n = 1, mu = expected_inf_daily[365], size = 100)
+
+# understanding the parameters of distribution
+set.seed(2025-02-21)
+hist(rnbinom(n = 100, mu = 50, size = 1))
+hist(rnbinom(n = 100, mu = 50, size = 50))
+hist(rnbinom(n = 100, mu = 50, size = 100))
+hist(rnbinom(n = 100, mu = 50, size = 1000))
+
+# plot to visualise
+plot(inf_daily ~ days, type = "l", lty = "dotted") 
+#add infection prevalence surveys to the plot
+abline(v = prev_days, 
        lty = 2)
 
 # create an empty dataframe the length of the disease outbreak 
@@ -67,7 +85,8 @@ prevalence_surveys <- tibble( #and prevalence surveys
   n_positive = NA
 )
 
-agents <- tibble( #and specific information for each agent
+# and specific information for each agent
+agents <- tibble( 
   infection_day = rep(NA, pop),
   ever_symptomatic = rep(NA, pop),
   symptom_delay = rep(NA, pop)
@@ -79,7 +98,7 @@ set.seed(2025-02-20)
 # Specifically, clinical case timeseries and prevalence surveys with an
 # agent-based model, using a for-loop
 for (day in days) { #this will run the below code across all days in our 365 day sequence
-  
+  day <- 1
   # generate new infected agents
   n_new_infections <- inf_daily[day]
   
@@ -90,16 +109,23 @@ for (day in days) { #this will run the below code across all days in our 365 day
   )
   
   for (this_infected_agent in seq_len(n_new_infections)) {
-    
     # determine for each one whether they will ever be symptomatic
-    this_agent_ever_symptomatic <- rbinom(1, 1, prob_ever_symptomatic) == 1
+    agent_symptomatic <- rbinom(
+      n = 1, 
+      size = 1, 
+      prob = prob_ever_symptomatic
+      )
+    
+    # convert this to TRUE or FALSE - TRUE if it is a "1"
+    # this_agent_ever_symptomatic <- agent_symptomatic == 1
+    this_agent_ever_symptomatic <- as.logical(agent_symptomatic)
     
     # assign symptom onset days for the ever_symptomatic ones
     if (this_agent_ever_symptomatic) {
       
-      this_agent_symptom_delay <- round(runif(1,
-                                              min_symptom_delay,
-                                              max_symptom_delay))
+      this_agent_symptom_delay <- round(runif(n = 1,
+                                              min = min_symptom_delay,
+                                              max = max_symptom_delay))
     } else {
       this_agent_symptom_delay <- NA
     }
@@ -107,7 +133,7 @@ for (day in days) { #this will run the below code across all days in our 365 day
     new_infected_agents$infection_day[this_infected_agent] <- day
     new_infected_agents$ever_symptomatic[this_infected_agent] <- this_agent_ever_symptomatic
     new_infected_agents$symptom_delay[this_infected_agent] <- this_agent_symptom_delay
-  }
+  } # close infected agent for loop
   # track these in the full list of agents
   
   # find the next block of empty spaces in the full tibble of agents
