@@ -91,14 +91,19 @@ agents <- tibble(
   ever_symptomatic = rep(NA, pop),
   symptom_delay = rep(NA, pop)
 )
+
 #set our seed
 set.seed(2025-02-20)
 
 #### Now simulate ####
 # Specifically, clinical case timeseries and prevalence surveys with an
 # agent-based model, using a for-loop
+## try for the first 52 days only, for debugging
+# days_sub <- seq_len(prev_days[1] - 1)
+# for (day in days_sub) {
+
 for (day in days) { #this will run the below code across all days in our 365 day sequence
-  day <- 1
+  
   # generate new infected agents
   n_new_infections <- inf_daily[day]
   
@@ -109,6 +114,7 @@ for (day in days) { #this will run the below code across all days in our 365 day
   )
   
   for (this_infected_agent in seq_len(n_new_infections)) {
+    
     # determine for each one whether they will ever be symptomatic
     agent_symptomatic <- rbinom(
       n = 1, 
@@ -155,7 +161,8 @@ for (day in days) { #this will run the below code across all days in our 365 day
   if (is_prevalence_survey_day) {
     
     # sample agents at random from the population
-    which_agents_sampled <- sample(seq_len(pop), size = prev_n_sampled)
+    all_agent_ids <- seq_len(pop)
+    which_agents_sampled <- sample(all_agent_ids, size = prev_n_sampled)
     agents_sampled <- agents[which_agents_sampled, ]
     
     # tabulate which are positive
@@ -190,15 +197,24 @@ for (day in days) { #this will run the below code across all days in our 365 day
   }
 }
 
+head(clinical_cases, 10)
+
 #### Outputs ####
 library(readr)
 # Case timeseries
 clinical_cases
-write_csv(x = clinical_cases, file = "outputs/case_timeseries.csv")
+write_csv(x= clinical_cases, file="outputs/clinical_cases.csv")
 
 #Prevalence survey timeseries
 prevalence_surveys
+#calculate percentage of people positive as a consistent metric
+prevalence_surveys$percentage_positive <- (
+  prevalence_surveys$n_positive/prevalence_surveys$n_sampled)*100 
+
 write_csv(x = prevalence_surveys, file = "outputs/prevalence_timeseries.csv")
+
+#read in this file
+prevalence_surveys_from_file <- read_csv("outputs/prevalence_timeseries.csv")
 
 #Let's come back to our plot of infections
 plot(inf_daily ~ days, type = "l", lty = "dotted", col = "grey50")
@@ -209,13 +225,13 @@ lines(cases ~ days,
 
 #plot the positivity from the prevalence surveys
 #First we need to calculate the % positive
-prevalence_surveys$percentage_positive <- (prevalence_surveys$n_positive/prevalence_surveys$n_sampled)*100
+#prevalence_surveys$percentage_positive <- (prevalence_surveys$n_positive/prevalence_surveys$n_sampled)*100
 
 plot(x = prevalence_surveys$day,
      y = prevalence_surveys$percentage_positive, 
      type = "p")
 
-
+plot(expected_inf_daily~days) #should approx. match up with trend in prevalence survey plot
 
 
 
